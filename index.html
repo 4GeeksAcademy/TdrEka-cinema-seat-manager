@@ -3,24 +3,995 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hello World with Typescript</title>
-  </head>
-  <body class="min-h-screen bg-slate-100 text-slate-900">
-    <main class="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center gap-6 p-6">
-      <h1 class="text-4xl font-bold tracking-tight">Hello World with Typescript</h1>
+    <title>CINEPLEX - Seat Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Manrope:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: #0a0a0a;
+        font-family: "Manrope", sans-serif;
+      }
 
-      <section class="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <img
-          src="/rigo-baby.jpg"
-          alt="Hello Rigo"
-          class="h-64 w-full bg-slate-50 object-contain p-2"
-        />
-        <div class="p-5">
-          <h2 class="text-xl font-semibold text-slate-900">Hello Rigo</h2>
-          <p id="app" class="mt-2 text-sm text-slate-600"></p>
+      .title-font {
+        font-family: "Oswald", sans-serif;
+      }
+
+      .app-enter {
+        animation: appEnter 520ms ease-out;
+      }
+
+      .screen-shape {
+        width: min(100%, 680px);
+        margin: 0 auto;
+        height: 56px;
+        clip-path: polygon(10% 100%, 90% 100%, 82% 10%, 18% 10%);
+        background: linear-gradient(180deg, #d4d4d8 0%, #71717a 100%);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #27272a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: 0.2em;
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+
+      .seat-grid {
+        display: grid;
+        grid-template-columns: 26px repeat(10, minmax(0, 1fr));
+        gap: 0.35rem;
+      }
+
+      .seat-btn {
+        transition: transform 200ms ease, opacity 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+      }
+
+      .seat-change {
+        animation: seatChange 220ms ease;
+      }
+
+      .selected-pulse {
+        animation: selectedPulse 1.35s ease-in-out infinite;
+      }
+
+      .adjacent-glow {
+        box-shadow: 0 0 0 2px rgba(255, 237, 74, 0.7), 0 0 22px rgba(251, 146, 60, 0.6);
+      }
+
+      @keyframes appEnter {
+        0% {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes seatChange {
+        0% {
+          opacity: 0.35;
+          transform: scale(0.88);
+        }
+
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes selectedPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.45);
+        }
+
+        50% {
+          transform: scale(1.06);
+          box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.2);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .seat-grid {
+          grid-template-columns: 20px repeat(10, minmax(0, 1fr));
+          gap: 0.25rem;
+        }
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-white">
+    <main class="mx-auto w-full max-w-6xl px-3 py-6 pb-28 sm:px-4 sm:py-8 sm:pb-32">
+      <section class="app-enter rounded-3xl border border-[#2a2a2a] bg-[#1a1a1a] p-4 shadow-2xl sm:p-6 md:p-8">
+        <div class="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 class="title-font text-4xl font-bold tracking-wider text-orange-500 sm:text-5xl">🎬 CINEPLEX</h1>
+            <p class="mt-1 text-sm text-gray-400 sm:text-base">Seat Booking System</p>
+          </div>
+          <button
+            id="resetBtn"
+            class="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-2 text-xs font-semibold text-orange-200 transition hover:bg-[#202020] sm:text-sm"
+          >
+            Reset Room
+          </button>
         </div>
+
+        <div class="mb-5">
+          <div class="screen-shape">◀ SCREEN ▶</div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <div id="seatGridWrapper" class="mx-auto min-w-max"></div>
+        </div>
+
+        <section class="mt-6 rounded-2xl border border-[#2a2a2a] bg-[#121212] p-4">
+          <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-orange-200">Booking Panel</h2>
+          <div id="selectedPanel" class="min-h-10"></div>
+          <div id="successBanner" class="mt-4 hidden w-full rounded-xl border border-green-700 bg-green-900/70 px-4 py-3 text-sm font-semibold text-green-100"></div>
+        </section>
+
+        <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            id="confirmBtn"
+            class="rounded-xl bg-orange-500 px-4 py-2 text-sm font-bold text-black transition hover:bg-orange-400"
+          >
+            Confirm Booking
+          </button>
+          <button
+            id="cancelBtn"
+            class="rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-red-500"
+          >
+            Cancel Selection
+          </button>
+          <button
+            id="findAdjacentBtn"
+            class="rounded-xl border border-[#2a2a2a] bg-[#111111] px-4 py-2 text-sm font-semibold text-orange-200 transition hover:border-orange-500"
+          >
+            Find Adjacent
+          </button>
+        </div>
+
+        <p id="adjacentMessage" class="mt-3 text-center text-sm text-gray-300"></p>
+
+        <section class="mt-5 rounded-2xl border border-[#2a2a2a] bg-[#121212] p-4">
+          <div class="flex items-center justify-between gap-3">
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-orange-200">📋 Booking History</h3>
+            <button
+              id="historyToggleBtn"
+              class="rounded-lg border border-[#2a2a2a] bg-[#111111] px-3 py-1.5 text-xs font-semibold text-orange-200 transition hover:border-orange-500"
+            >
+              Show History ▾
+            </button>
+          </div>
+          <div id="historyPanel" class="mt-3 hidden">
+            <div class="mb-3 flex justify-end">
+              <button
+                id="clearHistoryBtn"
+                class="rounded-lg bg-red-600 px-3 py-1 text-xs font-bold text-white transition hover:bg-red-500"
+              >
+                Clear History
+              </button>
+            </div>
+            <div id="historyList" class="overflow-hidden rounded-xl border border-[#2a2a2a]"></div>
+          </div>
+        </section>
       </section>
     </main>
-    <script type="module" src="/src/main.ts"></script>
+
+    <div class="fixed bottom-0 left-0 right-0 z-40 border-t border-[#2a2a2a] bg-[#111111]/95 px-4 py-3 backdrop-blur">
+      <div class="mx-auto max-w-6xl text-center text-sm font-semibold text-orange-200 sm:text-base">
+        🟠 Selected: <span id="selectedCount">0</span>
+        <span class="mx-2 text-gray-500">|</span>
+        🔴 Occupied: <span id="occupiedCount">0</span>
+        <span class="mx-2 text-gray-500">|</span>
+        ⬛ Available: <span id="availableCount">0</span>
+        <span class="mx-2 text-gray-500">|</span>
+        📋 Bookings: <span id="bookingCount">0</span>
+      </div>
+    </div>
+
+    <div id="toastContainer" class="pointer-events-none fixed bottom-20 right-4 z-50 flex w-full max-w-sm flex-col gap-2"></div>
+
+    <script>
+      // FIXED: Added explicit seat-state constants to remove magic numbers.
+      const SEAT_AVAILABLE = 0;
+      const SEAT_OCCUPIED = 1;
+      const SEAT_SELECTED = 2;
+
+      // FIXED: Added debug switch so console output can be disabled in production.
+      const DEBUG = false;
+
+      // FIXED: Added seat-state validation helper for defensive state checks.
+      function isValidSeatState(state) {
+        return state === SEAT_AVAILABLE || state === SEAT_OCCUPIED || state === SEAT_SELECTED;
+      }
+
+      function initializeSeatingMatrix() {
+        var rows = 8;
+        var cols = 10;
+        var matrix = [];
+
+        for (var r = 0; r < rows; r += 1) {
+          var row = [];
+          for (var c = 0; c < cols; c += 1) {
+            row.push(SEAT_AVAILABLE);
+          }
+          matrix.push(row);
+        }
+
+        return matrix;
+      }
+
+      function displaySeatingMatrix(matrix) {
+        var header = "    ";
+        for (var col = 1; col <= 10; col += 1) {
+          header += col.toString().padStart(2, " ") + " ";
+        }
+
+        if (DEBUG) {
+          console.log(header);
+        }
+
+        for (var row = 0; row < matrix.length; row += 1) {
+          var rowLabel = (row + 1).toString().padStart(2, " ") + " | ";
+          var rowDisplay = "";
+
+          for (var seat = 0; seat < matrix[row].length; seat += 1) {
+            var symbol = " L";
+            if (!isValidSeatState(matrix[row][seat])) {
+              // FIXED: Added invalid seat-state guard while reading matrix values.
+              if (DEBUG) {
+                console.log("❌ Invalid seat state detected.");
+              }
+              return;
+            }
+
+            if (matrix[row][seat] === SEAT_OCCUPIED) {
+              symbol = "OX";
+            } else if (matrix[row][seat] === SEAT_SELECTED) {
+              symbol = "**";
+            }
+            rowDisplay += symbol + " ";
+          }
+
+          if (DEBUG) {
+            console.log(rowLabel + rowDisplay);
+          }
+        }
+
+        if (DEBUG) {
+          console.log("\nLegend: OX = Occupied, L = Available, ** = Selected\n");
+        }
+      }
+
+      function reserveSeat(matrix, row, col) {
+        var rowIndex = row - 1;
+        var colIndex = col - 1;
+
+        if (
+          rowIndex < 0 ||
+          rowIndex >= matrix.length ||
+          colIndex < 0 ||
+          colIndex >= matrix[0].length
+        ) {
+          return "❌ Invalid seat position.";
+        }
+
+        var seatState = matrix[rowIndex][colIndex];
+        if (!isValidSeatState(seatState)) {
+          // FIXED: Added invalid seat-state guard after bounds checking.
+          return "❌ Invalid seat state detected.";
+        }
+
+        if (seatState === SEAT_OCCUPIED) {
+          return "❌ Seat [" + row + "," + col + "] is already taken.";
+        }
+
+        if (seatState === SEAT_SELECTED) {
+          return "❌ Seat [" + row + "," + col + "] is currently selected.";
+        }
+
+        matrix[rowIndex][colIndex] = SEAT_OCCUPIED;
+        return "✅ Seat [" + row + "," + col + "] reserved successfully.";
+      }
+
+      function selectSeat(matrix, row, col) {
+        var rowIndex = row - 1;
+        var colIndex = col - 1;
+
+        if (
+          rowIndex < 0 ||
+          rowIndex >= matrix.length ||
+          colIndex < 0 ||
+          colIndex >= matrix[0].length
+        ) {
+          return "❌ Invalid seat position.";
+        }
+
+        var seatState = matrix[rowIndex][colIndex];
+        if (!isValidSeatState(seatState)) {
+          // FIXED: Added invalid seat-state guard after bounds checking.
+          return "❌ Invalid seat state detected.";
+        }
+
+        if (seatState === SEAT_OCCUPIED) {
+          return "❌ Seat already booked.";
+        }
+
+        if (seatState === SEAT_AVAILABLE) {
+          matrix[rowIndex][colIndex] = SEAT_SELECTED;
+          return "🟠 Seat [" + row + "," + col + "] selected.";
+        }
+
+        matrix[rowIndex][colIndex] = SEAT_AVAILABLE;
+        return "↩️ Seat [" + row + "," + col + "] deselected.";
+      }
+
+      function getSelectedSeats(matrix) {
+        var selectedSeats = [];
+
+        for (var r = 0; r < matrix.length; r += 1) {
+          for (var c = 0; c < matrix[r].length; c += 1) {
+            if (!isValidSeatState(matrix[r][c])) {
+              // FIXED: Added invalid seat-state guard while reading matrix values.
+              return [];
+            }
+
+            if (matrix[r][c] === SEAT_SELECTED) {
+              selectedSeats.push([r + 1, c + 1]);
+            }
+          }
+        }
+
+        return selectedSeats;
+      }
+
+      function confirmBooking(matrix) {
+        var selectedSeats = getSelectedSeats(matrix);
+
+        if (selectedSeats.length === 0) {
+          return "⚠️ No seats selected to book.";
+        }
+
+        for (var i = 0; i < selectedSeats.length; i += 1) {
+          var rowIndex = selectedSeats[i][0] - 1;
+          var colIndex = selectedSeats[i][1] - 1;
+          matrix[rowIndex][colIndex] = SEAT_OCCUPIED;
+        }
+
+        var seatList = "";
+        for (var j = 0; j < selectedSeats.length; j += 1) {
+          seatList +=
+            "[" + selectedSeats[j][0] + "," + selectedSeats[j][1] + "]" +
+            (j < selectedSeats.length - 1 ? ", " : "");
+        }
+
+        return (
+          "✅ Booking confirmed for seats: " +
+          seatList +
+          ". Total booked: " +
+          selectedSeats.length +
+          "."
+        );
+      }
+
+      function cancelSelection(matrix) {
+        var deselectedCount = 0;
+
+        for (var r = 0; r < matrix.length; r += 1) {
+          for (var c = 0; c < matrix[r].length; c += 1) {
+            if (!isValidSeatState(matrix[r][c])) {
+              // FIXED: Added invalid seat-state guard while reading matrix values.
+              return "❌ Invalid seat state detected.";
+            }
+
+            if (matrix[r][c] === SEAT_SELECTED) {
+              matrix[r][c] = SEAT_AVAILABLE;
+              deselectedCount += 1;
+            }
+          }
+        }
+
+        return "↩️ Selection cleared. " + deselectedCount + " seat(s) were deselected.";
+      }
+
+      function countSeats(matrix) {
+        var occupied = 0;
+        var selected = 0;
+        var available = 0;
+
+        for (var r = 0; r < matrix.length; r += 1) {
+          for (var c = 0; c < matrix[r].length; c += 1) {
+            if (!isValidSeatState(matrix[r][c])) {
+              // FIXED: Added invalid seat-state guard while reading matrix values.
+              return {
+                occupied: 0,
+                selected: 0,
+                available: 0,
+              };
+            }
+
+            if (matrix[r][c] === SEAT_OCCUPIED) {
+              occupied += 1;
+            } else if (matrix[r][c] === SEAT_SELECTED) {
+              selected += 1;
+            } else {
+              available += 1;
+            }
+          }
+        }
+
+        return {
+          occupied: occupied,
+          selected: selected,
+          available: available,
+        };
+      }
+
+      function findAdjacentSeats(matrix) {
+        for (var r = 0; r < matrix.length; r += 1) {
+          for (var c = 0; c < matrix[r].length - 1; c += 1) {
+            if (!isValidSeatState(matrix[r][c]) || !isValidSeatState(matrix[r][c + 1])) {
+              // FIXED: Added invalid seat-state guard while reading matrix values.
+              return null;
+            }
+
+            if (matrix[r][c] === SEAT_AVAILABLE && matrix[r][c + 1] === SEAT_AVAILABLE) {
+              var result = [
+                [r + 1, c + 1],
+                [r + 1, c + 2],
+              ];
+              if (DEBUG) {
+                console.log(
+                  "Adjacent seats found: [" +
+                    result[0][0] +
+                    "," +
+                    result[0][1] +
+                    "] and [" +
+                    result[1][0] +
+                    "," +
+                    result[1][1] +
+                    "]"
+                );
+              }
+              return result;
+            }
+          }
+        }
+
+        if (DEBUG) {
+          console.log("No adjacent available seats found.");
+        }
+        return null;
+      }
+
+      var seatingMatrix = initializeSeatingMatrix();
+      var recentlyChangedSeat = null;
+      var adjacentHighlightSeats = [];
+      var adjacentTimeoutId = null;
+      var bannerTimeoutId = null;
+      var bookingHistory = [];
+      var nextBookingId = 1;
+      var isHistoryOpen = false;
+      // FIXED: Added action lock to prevent duplicate rapid clicks.
+      var isActionLocked = false;
+
+      var seatGridWrapper = document.getElementById("seatGridWrapper");
+      var selectedPanel = document.getElementById("selectedPanel");
+      var confirmBtn = document.getElementById("confirmBtn");
+      var cancelBtn = document.getElementById("cancelBtn");
+      var findAdjacentBtn = document.getElementById("findAdjacentBtn");
+      var resetBtn = document.getElementById("resetBtn");
+      var adjacentMessageEl = document.getElementById("adjacentMessage");
+      var successBanner = document.getElementById("successBanner");
+      var historyToggleBtn = document.getElementById("historyToggleBtn");
+      var clearHistoryBtn = document.getElementById("clearHistoryBtn");
+      var historyPanel = document.getElementById("historyPanel");
+      var historyList = document.getElementById("historyList");
+      var selectedCountEl = document.getElementById("selectedCount");
+      var occupiedCountEl = document.getElementById("occupiedCount");
+      var availableCountEl = document.getElementById("availableCount");
+      var bookingCountEl = document.getElementById("bookingCount");
+      var toastContainer = document.getElementById("toastContainer");
+
+      // FIXED: Added history snapshot accessor to reduce direct mutable reads.
+      function getBookingHistorySnapshot() {
+        return bookingHistory.slice();
+      }
+
+      // FIXED: Added storage helper for matrix persistence.
+      function saveMatrixToStorage() {
+        localStorage.setItem("cinemaMatrix", JSON.stringify(seatingMatrix));
+      }
+
+      // FIXED: Added storage helper for history persistence.
+      function saveHistoryToStorage() {
+        localStorage.setItem("cinemaHistory", JSON.stringify(bookingHistory));
+      }
+
+      // FIXED: Added action lock wrapper to prevent duplicate rapid clicks.
+      function withActionLock(fn) {
+        if (isActionLocked) {
+          return;
+        }
+
+        isActionLocked = true;
+        try {
+          fn();
+        } finally {
+          isActionLocked = false;
+        }
+      }
+
+      function showToast(message, tone) {
+        var toast = document.createElement("div");
+        var toneClasses = "bg-orange-500 text-black border border-orange-400";
+
+        if (tone === "success") {
+          toneClasses = "bg-green-700 text-green-50 border border-green-500";
+        }
+
+        if (tone === "error") {
+          toneClasses = "bg-red-700 text-red-50 border border-red-500";
+        }
+
+        // FIXED: Added toast stack cap to prevent overflow.
+        while (toastContainer.children.length >= 4) {
+          toastContainer.removeChild(toastContainer.firstChild);
+        }
+
+        toast.className =
+          "pointer-events-auto rounded-xl px-4 py-3 text-sm font-semibold shadow-xl transition " +
+          toneClasses;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+
+        window.setTimeout(function () {
+          toast.classList.add("opacity-0", "translate-y-1");
+          window.setTimeout(function () {
+            toast.remove();
+          }, 180);
+        }, 3000);
+      }
+
+      function clearBanner() {
+        successBanner.classList.add("hidden");
+        successBanner.textContent = "";
+      }
+
+      function showSuccessBanner(message) {
+        successBanner.textContent = message;
+        successBanner.classList.remove("hidden");
+
+        if (bannerTimeoutId !== null) {
+          window.clearTimeout(bannerTimeoutId);
+        }
+
+        bannerTimeoutId = window.setTimeout(function () {
+          clearBanner();
+          bannerTimeoutId = null;
+        }, 4000);
+      }
+
+      function isAdjacentHighlightSeat(row, col) {
+        for (var i = 0; i < adjacentHighlightSeats.length; i += 1) {
+          if (adjacentHighlightSeats[i][0] === row && adjacentHighlightSeats[i][1] === col) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function updateStats() {
+        var counts = countSeats(seatingMatrix);
+        selectedCountEl.textContent = String(counts.selected);
+        occupiedCountEl.textContent = String(counts.occupied);
+        availableCountEl.textContent = String(counts.available);
+        bookingCountEl.textContent = String(getBookingHistorySnapshot().length);
+      }
+
+      // FIXED: Added action-state updater to disable unavailable actions.
+      function updateActionStates() {
+        var selectedCount = getSelectedSeats(seatingMatrix).length;
+        var hasSelected = selectedCount > 0;
+
+        confirmBtn.disabled = !hasSelected;
+        cancelBtn.disabled = !hasSelected;
+
+        confirmBtn.classList.toggle("opacity-50", !hasSelected);
+        confirmBtn.classList.toggle("cursor-not-allowed", !hasSelected);
+        cancelBtn.classList.toggle("opacity-50", !hasSelected);
+        cancelBtn.classList.toggle("cursor-not-allowed", !hasSelected);
+      }
+
+      function setHistoryPanelVisibility() {
+        if (isHistoryOpen) {
+          historyPanel.classList.remove("hidden");
+          historyToggleBtn.textContent = "Hide History ▴";
+        } else {
+          historyPanel.classList.add("hidden");
+          historyToggleBtn.textContent = "Show History ▾";
+        }
+      }
+
+      function renderHistory() {
+        historyList.innerHTML = "";
+        var historySnapshot = getBookingHistorySnapshot();
+
+        if (historySnapshot.length === 0) {
+          var emptyRow = document.createElement("div");
+          emptyRow.className = "bg-[#141414] px-3 py-3 text-sm text-gray-400";
+          emptyRow.textContent = "No bookings yet.";
+          historyList.appendChild(emptyRow);
+          updateStats();
+          return;
+        }
+
+        for (var i = historySnapshot.length - 1; i >= 0; i -= 1) {
+          var booking = historySnapshot[i];
+          var row = document.createElement("div");
+          var visualIndexFromTop = historySnapshot.length - 1 - i;
+          row.className =
+            (visualIndexFromTop % 2 === 0 ? "bg-[#1a1a1a]" : "bg-[#141414]") +
+            " border-b border-[#2a2a2a] px-3 py-2 text-sm text-orange-100";
+          row.textContent =
+            "#" +
+            booking.id +
+            " | " +
+            booking.time +
+            " | " +
+            booking.count +
+            " seats | " +
+            booking.seats.join(", ");
+          historyList.appendChild(row);
+        }
+
+        var lastRow = historyList.lastChild;
+        if (lastRow) {
+          lastRow.classList.remove("border-b");
+        }
+
+        updateStats();
+      }
+
+      function addBookingHistoryEntry(selectedSeats) {
+        var seatCodes = [];
+        for (var i = 0; i < selectedSeats.length; i += 1) {
+          seatCodes.push("R" + selectedSeats[i][0] + "C" + selectedSeats[i][1]);
+        }
+
+        bookingHistory.push({
+          id: nextBookingId,
+          seats: seatCodes,
+          time: new Date().toLocaleTimeString(),
+          count: selectedSeats.length,
+        });
+        nextBookingId += 1;
+      }
+
+      function renderSelectedPanel() {
+        var selectedSeats = getSelectedSeats(seatingMatrix);
+        selectedPanel.innerHTML = "";
+
+        if (selectedSeats.length === 0) {
+          var emptyState = document.createElement("p");
+          emptyState.className = "text-sm text-gray-400";
+          emptyState.textContent = "No seats selected — click seats above to begin";
+          selectedPanel.appendChild(emptyState);
+          return;
+        }
+
+        var chipWrap = document.createElement("div");
+        chipWrap.className = "flex flex-wrap gap-2";
+
+        for (var i = 0; i < selectedSeats.length; i += 1) {
+          (function (seat) {
+            var chip = document.createElement("div");
+            chip.className =
+              "flex items-center gap-2 rounded-full border border-orange-600 bg-orange-500/15 px-3 py-1.5 text-xs font-semibold text-orange-200";
+
+            var label = document.createElement("span");
+            label.textContent = "Row " + seat[0] + ", Seat " + seat[1];
+
+            var closeBtn = document.createElement("button");
+            closeBtn.className =
+              "h-5 w-5 rounded-full bg-orange-500 text-xs font-bold text-black transition hover:bg-orange-400";
+            closeBtn.textContent = "✕";
+            closeBtn.setAttribute("aria-label", "Remove selected seat row " + seat[0] + " seat " + seat[1]);
+            closeBtn.addEventListener("click", function () {
+              var message = selectSeat(seatingMatrix, seat[0], seat[1]);
+              recentlyChangedSeat = [seat[0], seat[1]];
+              saveMatrixToStorage();
+              renderAll();
+              showToast(message, "info");
+              window.setTimeout(function () {
+                recentlyChangedSeat = null;
+                renderGrid();
+              }, 240);
+            });
+
+            chip.appendChild(label);
+            chip.appendChild(closeBtn);
+            chipWrap.appendChild(chip);
+          })(selectedSeats[i]);
+        }
+
+        selectedPanel.appendChild(chipWrap);
+      }
+
+      function buildSeatButton(row, col) {
+        var seatState = seatingMatrix[row - 1][col - 1];
+        var seatBtn = document.createElement("button");
+        var stateClass = "";
+        var label = "L";
+        var stateLabel = "available";
+
+        if (!isValidSeatState(seatState)) {
+          // FIXED: Added invalid seat-state guard while reading matrix values.
+          stateClass = "bg-red-900 text-red-300 border border-red-800 cursor-not-allowed";
+          label = "!";
+          stateLabel = "invalid";
+        } else if (seatState === SEAT_AVAILABLE) {
+          stateClass = "bg-[#1c1c1c] border border-orange-800 text-orange-500 hover:bg-[#232323] cursor-pointer";
+          label = "L";
+          stateLabel = "available";
+        } else if (seatState === SEAT_OCCUPIED) {
+          stateClass = "bg-red-900 text-red-400 border border-red-800 cursor-not-allowed";
+          label = "✕";
+          stateLabel = "occupied";
+        } else {
+          stateClass = "bg-orange-500 text-black border border-orange-300 font-bold cursor-pointer selected-pulse";
+          label = "★";
+          stateLabel = "selected";
+        }
+
+        var changedClass = "";
+        if (recentlyChangedSeat && recentlyChangedSeat[0] === row && recentlyChangedSeat[1] === col) {
+          changedClass = " seat-change";
+        }
+
+        var adjacentClass = isAdjacentHighlightSeat(row, col) ? " adjacent-glow" : "";
+        seatBtn.className =
+          "seat-btn h-8 w-8 rounded-md text-xs font-semibold sm:h-9 sm:w-9 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-1 focus:ring-offset-black " +
+          stateClass +
+          changedClass +
+          adjacentClass;
+        seatBtn.textContent = label;
+        // FIXED: Added accessible seat aria-label with dynamic state.
+        seatBtn.setAttribute("aria-label", "Row " + row + ", Seat " + col + ", " + stateLabel);
+
+        seatBtn.addEventListener("click", function () {
+          if (!isValidSeatState(seatState)) {
+            showToast("❌ Invalid seat state detected.", "error");
+            return;
+          }
+
+          if (seatState === SEAT_OCCUPIED) {
+            showToast("❌ Seat already booked.", "error");
+            return;
+          }
+
+          var message = selectSeat(seatingMatrix, row, col);
+          recentlyChangedSeat = [row, col];
+          clearBanner();
+          adjacentHighlightSeats = [];
+          adjacentMessageEl.textContent = "";
+          saveMatrixToStorage();
+          renderAll();
+          showToast(message, "info");
+          window.setTimeout(function () {
+            recentlyChangedSeat = null;
+            renderGrid();
+          }, 240);
+        });
+
+        return seatBtn;
+      }
+
+      function renderGrid() {
+        var grid = document.createElement("div");
+        grid.className = "seat-grid";
+
+        var topCell = document.createElement("div");
+        grid.appendChild(topCell);
+
+        for (var col = 1; col <= 10; col += 1) {
+          var colLabel = document.createElement("div");
+          colLabel.className = "text-center text-xs font-semibold text-orange-200";
+          colLabel.textContent = String(col);
+          grid.appendChild(colLabel);
+        }
+
+        for (var row = 1; row <= 8; row += 1) {
+          var rowLabel = document.createElement("div");
+          rowLabel.className = "flex items-center justify-center text-xs font-semibold text-orange-200";
+          rowLabel.textContent = String(row);
+          grid.appendChild(rowLabel);
+
+          for (var colInRow = 1; colInRow <= 10; colInRow += 1) {
+            grid.appendChild(buildSeatButton(row, colInRow));
+          }
+        }
+
+        seatGridWrapper.innerHTML = "";
+        seatGridWrapper.appendChild(grid);
+      }
+
+      function renderAll() {
+        // FIXED: Kept renderAll focused on UI rendering/state updates only.
+        renderGrid();
+        renderSelectedPanel();
+        updateStats();
+        updateActionStates();
+      }
+
+      confirmBtn.addEventListener("click", function () {
+        withActionLock(function () {
+          var selectedBefore = getSelectedSeats(seatingMatrix);
+          var confirmMessage = confirmBooking(seatingMatrix);
+
+          if (selectedBefore.length === 0) {
+            showToast(confirmMessage, "error");
+            return;
+          }
+
+          addBookingHistoryEntry(selectedBefore);
+
+          recentlyChangedSeat = null;
+          adjacentHighlightSeats = [];
+          adjacentMessageEl.textContent = "";
+          saveMatrixToStorage();
+          saveHistoryToStorage();
+          renderAll();
+          renderHistory();
+
+          var seatList = "";
+          for (var i = 0; i < selectedBefore.length; i += 1) {
+            seatList +=
+              "[" + selectedBefore[i][0] + "," + selectedBefore[i][1] + "]" +
+              (i < selectedBefore.length - 1 ? ", " : "");
+          }
+
+          showSuccessBanner("✅ Booking Confirmed! Seats: " + seatList + ". Enjoy the show! 🍿");
+          showToast("✅ Booking confirmed", "success");
+
+          if (DEBUG) {
+            displaySeatingMatrix(seatingMatrix);
+          }
+        });
+      });
+
+      cancelBtn.addEventListener("click", function () {
+        withActionLock(function () {
+          var message = cancelSelection(seatingMatrix);
+          clearBanner();
+          adjacentHighlightSeats = [];
+          adjacentMessageEl.textContent = "";
+          saveMatrixToStorage();
+          renderAll();
+          showToast("↩️ Selection cleared", "info");
+
+          if (DEBUG) {
+            console.log(message);
+            displaySeatingMatrix(seatingMatrix);
+          }
+        });
+      });
+
+      findAdjacentBtn.addEventListener("click", function () {
+        if (adjacentTimeoutId !== null) {
+          window.clearTimeout(adjacentTimeoutId);
+          adjacentTimeoutId = null;
+        }
+
+        var pair = findAdjacentSeats(seatingMatrix);
+
+        if (!pair) {
+          adjacentHighlightSeats = [];
+          adjacentMessageEl.className = "mt-3 text-center text-sm text-red-400";
+          adjacentMessageEl.textContent = "❌ No adjacent seats available";
+          renderGrid();
+          showToast("❌ No adjacent seats available", "error");
+          return;
+        }
+
+        adjacentHighlightSeats = [pair[0], pair[1]];
+        adjacentMessageEl.className = "mt-3 text-center text-sm text-orange-200";
+        adjacentMessageEl.textContent =
+          "✅ Adjacent seats found: Row " + pair[0][0] + ", Cols " + pair[0][1] + "-" + pair[1][1];
+        renderGrid();
+        showToast("✅ Adjacent pair highlighted", "success");
+
+        adjacentTimeoutId = window.setTimeout(function () {
+          adjacentHighlightSeats = [];
+          renderGrid();
+          adjacentTimeoutId = null;
+        }, 3000);
+      });
+
+      resetBtn.addEventListener("click", function () {
+        seatingMatrix = initializeSeatingMatrix();
+        recentlyChangedSeat = null;
+        adjacentHighlightSeats = [];
+        adjacentMessageEl.textContent = "";
+        clearBanner();
+
+        if (adjacentTimeoutId !== null) {
+          window.clearTimeout(adjacentTimeoutId);
+          adjacentTimeoutId = null;
+        }
+
+        // FIXED: Cleared persisted session state on full room reset.
+        localStorage.removeItem("cinemaMatrix");
+        localStorage.removeItem("cinemaHistory");
+
+        renderAll();
+        showToast("🔄 Room reset", "info");
+      });
+
+      historyToggleBtn.addEventListener("click", function () {
+        isHistoryOpen = !isHistoryOpen;
+        setHistoryPanelVisibility();
+      });
+
+      clearHistoryBtn.addEventListener("click", function () {
+        bookingHistory = [];
+        nextBookingId = 1;
+        saveHistoryToStorage();
+        renderHistory();
+        showToast("🧹 Booking history cleared", "info");
+      });
+
+      // FIXED: Restored session state from localStorage before initial render.
+      var restoredFromStorage = false;
+      var savedMatrix = localStorage.getItem("cinemaMatrix");
+      if (savedMatrix) {
+        try {
+          var parsedMatrix = JSON.parse(savedMatrix);
+          if (Array.isArray(parsedMatrix) && parsedMatrix.length > 0) {
+            seatingMatrix = parsedMatrix;
+            restoredFromStorage = true;
+          }
+        } catch (error) {
+          if (DEBUG) {
+            console.log("Failed to parse saved matrix", error);
+          }
+        }
+      }
+
+      var savedHistory = localStorage.getItem("cinemaHistory");
+      if (savedHistory) {
+        try {
+          var parsedHistory = JSON.parse(savedHistory);
+          if (Array.isArray(parsedHistory)) {
+            bookingHistory = parsedHistory;
+            restoredFromStorage = true;
+            if (bookingHistory.length > 0) {
+              nextBookingId = bookingHistory[bookingHistory.length - 1].id + 1;
+            }
+          }
+        } catch (error) {
+          if (DEBUG) {
+            console.log("Failed to parse saved history", error);
+          }
+        }
+      }
+
+      setHistoryPanelVisibility();
+      renderHistory();
+      renderAll();
+
+      if (restoredFromStorage) {
+        showToast("Session restored 🎬", "info");
+      }
+    </script>
   </body>
 </html>
